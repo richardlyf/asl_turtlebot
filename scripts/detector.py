@@ -158,10 +158,15 @@ class Detector:
         that is a unit vector in the direction of the pixel, in the camera frame """
 
         ########## Code starts here ##########
-        # TODO: Compute x, y, z.
-        x = 0.
-        y = 0.
-        z = 1.
+        # TODO: Compute x, y, z
+	K = np.array([
+	[self.fx, 0, self.cx],
+	[0, self.fy, self.cy],
+	[0, 0, 1]
+	])
+	pixel_coord = np.array([u, v, 1])
+	world_coord = np.linalg.solve(K, pixel_coord)
+	x, y, z = world_coord / np.linalg.norm(world_coord)
         ########## Code ends here ##########
 
         return x, y, z
@@ -258,10 +263,10 @@ class Detector:
 
         ########## Code starts here ##########
         # TODO: Extract camera intrinsic parameters.
-        self.cx = 0.
-        self.cy = 0.
-        self.fx = 1.
-        self.fy = 1.
+        self.cx = msg.K[2]
+        self.cy = msg.K[5]
+        self.fx = msg.K[0]
+        self.fy = msg.K[4]
         ########## Code ends here ##########
 
     def laser_callback(self, msg):

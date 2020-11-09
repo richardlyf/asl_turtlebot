@@ -37,7 +37,7 @@
           <geometry>
             <mesh>
               <uri>model://stop_sign/meshes/stop_sign.dae</uri>
-              <scale>.2 .2 .2</scale>
+              <scale>1 1 1</scale>
             </mesh>
           </geometry>
           <max_contacts>10</max_contacts>
@@ -58,7 +58,7 @@
           <geometry>
             <mesh>
               <uri>model://stop_sign/meshes/stop_sign.dae</uri>
-              <scale>.2 .2 .2</scale>
+              <scale>1 1 1</scale>
             </mesh>
           </geometry>
           <material>

@@ -31,8 +31,8 @@ class Navigator:
     It is the sole node that should publish to cmd_vel
     """
     def __init__(self):
-        rospy.init_node('turtlebot_navigator', anonymous=True)
         self.mode = Mode.IDLE
+        self.prev_mode = None
 
         # current state
         self.x = 0.0
@@ -151,7 +151,6 @@ class Navigator:
                                                   self.map_probs)
             if self.x_g is not None:
                 # if we have a goal to plan to, replan
-                rospy.loginfo("replanning because of new map")
                 self.replan() # new map, need to replan
 
     def shutdown_callback(self):
@@ -191,8 +190,11 @@ class Navigator:
         return (self.plan_resolution*round(x[0]/self.plan_resolution), self.plan_resolution*round(x[1]/self.plan_resolution))
 
     def switch_mode(self, new_mode):
-        rospy.loginfo("Switching from %s -> %s", self.mode, new_mode)
+        # logs the current mode
         self.mode = new_mode
+        if self.prev_mode != self.mode:
+            rospy.loginfo("    Current nav mode: %s", self.mode)
+            self.prev_mode = self.mode
 
     def publish_planned_path(self, path, publisher):
         # publish planned plan for visualization
@@ -271,19 +273,13 @@ class Navigator:
         x_goal = self.snap_to_grid((self.x_g, self.y_g))
         problem = AStar(state_min,state_max,x_init,x_goal,self.occupancy,self.plan_resolution)
 
-        rospy.loginfo("Navigator: computing navigation plan")
         success =  problem.solve()
         if not success:
-            rospy.loginfo("Planning failed")
             return
-        rospy.loginfo("Planning Succeeded")
-
         planned_path = problem.path
-        
 
         # Check whether path is too short
         if len(planned_path) < 4:
-            rospy.loginfo("Path too short to track")
             self.switch_mode(Mode.PARK)
             return
 
@@ -301,7 +297,6 @@ class Navigator:
             t_remaining_new = t_init_align + t_new[-1]
 
             if t_remaining_new > t_remaining_curr:
-                rospy.loginfo("New plan rejected (longer duration than current plan)")
                 self.publish_smoothed_path(traj_new, self.nav_smoothed_path_rej_pub)
                 return
 
@@ -319,11 +314,9 @@ class Navigator:
         self.heading_controller.load_goal(self.th_init)
 
         if not self.aligned():
-            rospy.loginfo("Not aligned with start direction")
             self.switch_mode(Mode.ALIGN)
             return
 
-        rospy.loginfo("Ready to track")
         self.switch_mode(Mode.TRACK)
 
     def navigate(self):
@@ -353,10 +346,8 @@ class Navigator:
             if self.near_goal():
                 self.switch_mode(Mode.PARK)
             elif not self.close_to_plan_start():
-                rospy.loginfo("replanning because far from start")
                 self.replan()
             elif (rospy.get_rostime() - self.current_plan_start_time).to_sec() > self.current_plan_duration:
-                rospy.loginfo("replanning because out of time")
                 self.replan() # we aren't near the goal but we thought we should have been, so replan
         elif self.mode == Mode.PARK:
             if self.at_goal():

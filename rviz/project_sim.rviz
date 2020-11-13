@@ -6,6 +6,7 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /Path1
       Splitter Ratio: 0.5
     Tree Height: 533
   - Class: rviz/Selection
@@ -151,7 +152,7 @@ Visualization Manager:
       Radius: 0.0299999993
       Shaft Diameter: 0.100000001
       Shaft Length: 0.100000001
-      Topic: /cmd_smoothed_path
+      Topic: /planned_path
       Unreliable: false
       Value: true
   Enabled: true
@@ -179,25 +180,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.66417933
+      Distance: 4.27464294
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.87605643
-        Y: 0.642456114
-        Z: -1.01281643
+        X: 3.17308927
+        Y: 0.626810431
+        Z: -0.967109978
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.910397887
+      Pitch: 1.40479648
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.450397879
+      Yaw: 1.36039722
     Saved: ~
 Window Geometry:
   Displays:
@@ -215,5 +216,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1200
-  X: 58
-  Y: 24
+  X: 57
+  Y: 6

@@ -124,6 +124,7 @@ class Navigator:
             self.x_g = data.x
             self.y_g = data.y
             self.theta_g = data.theta
+            rospy.loginfo("new goal received, replanning")
             self.replan()
 
     def map_md_callback(self, msg):
@@ -265,6 +266,9 @@ class Navigator:
             self.switch_mode(Mode.IDLE)
             return
 
+        # Before planning a path, load goal pose
+        self.pose_controller.load_goal(self.x_g, self.y_g, self.theta_g)
+
         # Attempt to plan a path
         state_min = self.snap_to_grid((-self.plan_horizon, -self.plan_horizon))
         state_max = self.snap_to_grid((self.plan_horizon, self.plan_horizon))
@@ -304,7 +308,6 @@ class Navigator:
         self.publish_planned_path(planned_path, self.nav_planned_path_pub)
         self.publish_smoothed_path(traj_new, self.nav_smoothed_path_pub)
 
-        self.pose_controller.load_goal(self.x_g, self.y_g, self.theta_g)
         self.traj_controller.load_traj(t_new, traj_new)
 
         self.current_plan_start_time = rospy.get_rostime()

@@ -8,7 +8,10 @@ from gazebo_msgs.msg import ModelStates
 from geometry_msgs.msg import Twist, PoseArray, Pose2D, PoseStamped
 from std_msgs.msg import Float32MultiArray, String
 from project_navigator import Navigator
+from marker_pub import MarkerTracker
 import tf
+import math
+import numpy as np
 
 class Mode(Enum):
     """State machine modes. Feel free to change."""
@@ -69,6 +72,10 @@ class Supervisor:
         self.navigator = Navigator()
         rospy.on_shutdown(self.navigator.shutdown_callback)
 
+        # Create MarkerTracker to remember vendor locations
+        self.vendor_names = ["apple", "banana", "pizza"]
+        self.marker_tracker = MarkerTracker(self.vendor_names)
+
         ########## PUBLISHERS ##########
         # Command vel (used for idling)
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
@@ -76,6 +83,9 @@ class Supervisor:
         ########## SUBSCRIBERS ##########
         # Stop sign detector
         rospy.Subscriber('/detector/stop_sign', DetectedObject, self.stop_sign_detected_callback)
+        # Vendor detectors
+        for vendor_name in self.vendor_names:
+            rospy.Subscriber('/detector/' + vendor_name, DetectedObject, self.vendor_detected_callback)
                 
 
     ########## SUBSCRIBER CALLBACKS ##########
@@ -90,6 +100,24 @@ class Supervisor:
         if dist > 0 and dist < self.params.stop_min_dist and self.mode == Mode.NAV:
             self.init_stop_sign()
 
+    def vendor_detected_callback(self, msg):
+        # compute the angle of the vendor relative to the robot
+        theta_left = msg.thetaleft
+        theta_right = msg.thetaright
+        if theta_left > math.pi:
+            theta_left -= 2. * math.pi
+        if theta_right > math.pi:
+            theta_right -= 2. * math.pi
+        avg_theta = theta_left + theta_right
+        if avg_theta != 0:
+            avg_theta /= 2.
+
+        # compute position of the detected vendor
+        global_theta = avg_theta + self.navigator.theta
+        vendor_x = self.navigator.x + np.cos(global_theta) * msg.distance 
+        vendor_y = self.navigator.y + np.sin(global_theta) * msg.distance 
+
+        self.marker_tracker.place_marker(msg.name, (vendor_x, vendor_y), np.pi - global_theta)
 
     ########## STATE MACHINE ACTIONS ##########
     def stay_idle(self):

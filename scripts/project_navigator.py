@@ -43,6 +43,8 @@ class Navigator:
         self.x_g = None
         self.y_g = None
         self.theta_g = None
+        # Do no reject replan if goal is new
+        self.new_goal = True
 
         self.th_init = 0.0
 
@@ -124,6 +126,7 @@ class Navigator:
             self.x_g = data.x
             self.y_g = data.y
             self.theta_g = data.theta
+            self.new_goal = True
             rospy.loginfo("new goal received, replanning")
             self.replan()
 
@@ -276,7 +279,6 @@ class Navigator:
         self.plan_start = x_init
         x_goal = self.snap_to_grid((self.x_g, self.y_g))
         problem = AStar(state_min,state_max,x_init,x_goal,self.occupancy,self.plan_resolution)
-
         success =  problem.solve()
         if not success:
             return
@@ -300,7 +302,7 @@ class Navigator:
             t_init_align = abs(th_err/self.om_max)
             t_remaining_new = t_init_align + t_new[-1]
 
-            if t_remaining_new > t_remaining_curr:
+            if t_remaining_new > t_remaining_curr and not self.new_goal:
                 self.publish_smoothed_path(traj_new, self.nav_smoothed_path_rej_pub)
                 return
 
@@ -312,6 +314,7 @@ class Navigator:
 
         self.current_plan_start_time = rospy.get_rostime()
         self.current_plan_duration = t_new[-1]
+        self.new_goal = False
 
         self.th_init = traj_new[0,2]
         self.heading_controller.load_goal(self.th_init)

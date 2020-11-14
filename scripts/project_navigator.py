@@ -269,6 +269,12 @@ class Navigator:
             self.switch_mode(Mode.IDLE)
             return
 
+        # Check if the goal is free
+        if not self.occupancy.is_free((self.x_g, self.y_g)):
+            rospy.loginfo("Goal position invalid since it's not free!")
+            self.switch_mode(Mode.IDLE)
+            return
+
         # Before planning a path, load goal pose
         self.pose_controller.load_goal(self.x_g, self.y_g, self.theta_g)
 

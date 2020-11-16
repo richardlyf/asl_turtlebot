@@ -1,3 +1,4 @@
+import rospy
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -26,6 +27,8 @@ class AStar(object):
         self.est_cost_through[x_init] = self.distance(x_init,x_goal)
 
         self.path = None        # the final path as a list of states
+
+        self.timeout_duration = rospy.Duration.from_sec(1.5)
 
     def is_free(self, x):
         """
@@ -161,10 +164,16 @@ class AStar(object):
                 set membership efficiently using the syntax "if item in set".
         """
         ########## Code starts here ##########
+        start_time = rospy.get_rostime()
         self.open_set.add(self.x_init)
         self.cost_to_arrive[self.x_init] = 0
         self.est_cost_through[self.x_init] = self.distance(self.x_init, self.x_goal)
         while len(self.open_set) > 0:
+            # stop solving if it's taking too long. Most likely something went wrong
+            if rospy.get_rostime() - start_time > self.timeout_duration:
+                rospy.loginfo("Astar planning timed out")
+                return False
+
             x_current = self.find_best_est_cost_through()
             if x_current == self.x_goal:
                 self.path = self.reconstruct_path()

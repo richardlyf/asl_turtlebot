@@ -8,6 +8,7 @@ from gazebo_msgs.msg import ModelStates
 from geometry_msgs.msg import Twist, PoseArray, Pose2D, PoseStamped
 from std_msgs.msg import Float32MultiArray, String
 from project_navigator import Navigator
+from project_navigator import Mode as NavMode
 from marker_pub import MarkerTracker
 import tf
 import math
@@ -19,7 +20,9 @@ class Mode(Enum):
     POSE = 2
     STOP = 3
     CROSS = 4
+    WAITING = 5
     MANUAL = 6
+    READY = 7
 
 
 class SupervisorParams:
@@ -42,6 +45,9 @@ class SupervisorParams:
         # Time to stop at a stop sign
         self.stop_time = rospy.get_param("~stop_time", 3.)
 
+        # Time to wait for loading or unloading
+        self.wait_time = rospy.get_param("~wait_time", 3.)
+        
         # Minimum distance from a stop sign to obey it
         self.stop_min_dist = rospy.get_param("~stop_min_dist", 1)
 
@@ -65,20 +71,37 @@ class Supervisor:
         self.params = SupervisorParams(verbose=True)
 
         # Current mode
-        self.mode = Mode.NAV
+        self.mode = Mode.MANUAL
         self.prev_mode = None  # For printing purposes
 
         # Navigator with planning, tracking, and pose stabilization
         self.navigator = Navigator()
         rospy.on_shutdown(self.navigator.shutdown_callback)
+        rospy.loginfo("Storing initial state info...")
+        while True:
+            if self.navigator.update_state():
+                break
 
         # Create MarkerTracker to remember vendor locations
         self.vendor_names = ["apple", "banana", "pizza"]
         self.marker_tracker = MarkerTracker(self.vendor_names)
 
+        # Remember the current order
+        self.order_list = None
+        self.order_repeat_count = 0
+        self.order_repeat_max = 10 # A given order is published 10 times
+        self.vendor_dist = 0.4 # How far away to park from vendor
+        self.home_pose = (self.navigator.x, self.navigator.y, self.navigator.theta)
+
+        # Error handling
+        self.retry_limit = 10
+        self.error_pos = []
+        self.cov = [[0.5, 0], [0, 0.5]]
+
         ########## PUBLISHERS ##########
         # Command vel (used for idling)
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.nav_goal_publisher = rospy.Publisher('/cmd_nav', Pose2D, queue_size=10)
 
         ########## SUBSCRIBERS ##########
         # Stop sign detector
@@ -86,7 +109,16 @@ class Supervisor:
         # Vendor detectors
         for vendor_name in self.vendor_names:
             rospy.Subscriber('/detector/' + vendor_name, DetectedObject, self.vendor_detected_callback)
+        # Request subscriber
+        rospy.Subscriber('/delivery_request', String, self.request_callback) 
                 
+    def publish_goal_pose(self, goal):
+        """ sends the current desired pose to the navigator """
+        pose_g_msg = Pose2D()
+        pose_g_msg.x = goal[0]
+        pose_g_msg.y = goal[1]
+        pose_g_msg.theta = goal[2]
+        self.nav_goal_publisher.publish(pose_g_msg)
 
     ########## SUBSCRIBER CALLBACKS ##########
     def stop_sign_detected_callback(self, msg):
@@ -113,11 +145,29 @@ class Supervisor:
             avg_theta /= 2.
 
         # compute position of the detected vendor
+        self.navigator.update_state()
         global_theta = avg_theta + self.navigator.theta
         vendor_x = self.navigator.x + np.cos(global_theta) * msg.distance 
         vendor_y = self.navigator.y + np.sin(global_theta) * msg.distance 
 
         self.marker_tracker.place_marker(msg.name, (vendor_x, vendor_y), np.pi - global_theta)
+
+    def request_callback(self, msg):
+        if self.mode == Mode.MANUAL:
+            self.mode = Mode.READY
+        self.order_repeat_count += 1
+        self.order_repeat_count %= self.order_repeat_max
+        # Ignore the message if it's not received for the first time
+        if self.order_repeat_count != 1:
+            return
+        # Ignore empty request
+        if msg.data == '':
+            return
+        # Parse the vendors
+        self.order_list = msg.data.split(",")
+        rospy.loginfo("Received order %s", self.order_list)
+        # TODO order_list should be updated to be in pick up order
+        self.order_list.append("home")
 
     ########## STATE MACHINE ACTIONS ##########
     def stay_idle(self):
@@ -135,6 +185,16 @@ class Supervisor:
         return self.mode == Mode.STOP and \
                rospy.get_rostime() - self.stop_sign_start > rospy.Duration.from_sec(self.params.stop_time)
 
+    def init_wait(self):
+        """ initiates waiting """
+        self.waiting_start = rospy.get_rostime()
+        self.mode = Mode.WAITING
+    
+    def is_ready(self):
+        """ checks if loading or unloading is over """
+        return self.mode == Mode.WAITING and \
+               rospy.get_rostime() - self.waiting_start > rospy.Duration.from_sec(self.params.wait_time)
+    
     def init_crossing(self):
         """ initiates an intersection crossing maneuver """
         self.cross_start = rospy.get_rostime()
@@ -157,7 +217,60 @@ class Supervisor:
             rospy.loginfo("Current mode: %s", self.mode)
             self.prev_mode = self.mode
 
-        elif self.mode == Mode.NAV:
+        # Navigator reached goal 
+        elif self.navigator.mode == NavMode.PARK and self.navigator.at_goal():
+            self.navigator.clear_goal()
+            if self.mode != Mode.MANUAL:
+                self.init_wait()
+
+        # Error position handling
+        elif self.navigator.mode == NavMode.ERROR:
+            # TODO: This is buggy still. A nav_cmd is published many times, and we try to
+            # send a new cmd too quickly, before the subscriber queue is able to drain?
+            return
+            pos = (self.navigator.x_g, self.navigator.y_g)
+            # If the goal that errored wasn't known, treat it as a new goal
+            if pos not in self.error_pos:
+                self.error_pos = [pos]
+            # If the same goal was retried too many times, give up
+            if len(self.error_pos) >= self.retry_limit:
+                rospy.loginfo("Retried around %s %s times, giving up...", self.error_pos[0], len(self.error_pos))
+                if self.mode != Mode.MANUAL:
+                    self.mode = Mode.READY
+                self.navigator.switch_mode(NavMode.IDLE)
+            else:
+                original_pos = self.error_pos[0]
+                new_pos = tuple(np.random.multivariate_normal(original_pos, self.cov))
+                self.error_pos.append(new_pos)
+                self.publish_goal_pose((new_pos[0], new_pos[1], self.navigator.theta_g))
+
+        elif self.mode == Mode.WAITING:
+            # Waiting to load or unload food
+            self.stay_idle()
+            if self.is_ready():
+                self.mode = Mode.READY
+
+        elif self.mode == Mode.READY:
+            # Ready to move to the next way point
+            self.stay_idle()
+            if self.order_list and len(self.order_list) > 0:
+                next_target_name = self.order_list.pop(0)
+                if next_target_name == "home":
+                    rospy.loginfo("Moving to home")
+                    self.publish_goal_pose(self.home_pose)
+                    self.mode = Mode.NAV
+                else:
+                    # Find pose of vendor
+                    rospy.loginfo("res: %s",self.navigator.map_resolution)
+                    vendor_pose = self.marker_tracker.get_goal_pose(next_target_name, self.vendor_dist)
+                    if vendor_pose is None:
+                        rospy.loginfo("Position of %s unknown. Skipping...", next_target_name)
+                    else:
+                        rospy.loginfo("Moving to %s", next_target_name)
+                        self.publish_goal_pose(vendor_pose)
+                        self.mode = Mode.NAV
+
+        elif self.mode == Mode.NAV or self.mode == Mode.MANUAL:
             # Moving towards a desired pose
             self.navigator.navigate()
 

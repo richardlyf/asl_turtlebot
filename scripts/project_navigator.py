@@ -24,6 +24,7 @@ class Mode(Enum):
     ALIGN = 1
     TRACK = 2
     PARK = 3
+    ERROR = 4
 
 class Navigator:
     """
@@ -151,7 +152,7 @@ class Navigator:
                                                   self.map_height,
                                                   self.map_origin[0],
                                                   self.map_origin[1],
-                                                  8,
+                                                  10, # Increasing window size inflates obstacles
                                                   self.map_probs)
             if self.x_g is not None:
                 # if we have a goal to plan to, replan
@@ -165,7 +166,16 @@ class Navigator:
         cmd_vel.linear.x = 0.0
         cmd_vel.angular.z = 0.0
         self.nav_vel_pub.publish(cmd_vel)
-
+    
+    def clear_goal(self):
+        """
+        removes the goal and switch to IDLE
+        """
+        self.x_g = None
+        self.y_g = None
+        self.theta_g = None
+        self.switch_mode(Mode.IDLE) 
+    
     def near_goal(self):
         """
         returns whether the robot is close enough in position to the goal to
@@ -266,13 +276,13 @@ class Navigator:
         # Make sure we have a map
         if not self.occupancy:
             rospy.loginfo("Navigator: replanning canceled, waiting for occupancy map.")
-            self.switch_mode(Mode.IDLE)
+            self.switch_mode(Mode.ERROR)
             return
 
         # Check if the goal is free
         if not self.occupancy.is_free((self.x_g, self.y_g)):
-            rospy.loginfo("Goal position invalid since it's not free!")
-            self.switch_mode(Mode.IDLE)
+            rospy.loginfo("Goal position %s invalid since it's not free!", (self.x_g, self.y_g))  
+            self.switch_mode(Mode.ERROR)
             return
 
         # Before planning a path, load goal pose
@@ -287,6 +297,7 @@ class Navigator:
         problem = AStar(state_min,state_max,x_init,x_goal,self.occupancy,self.plan_resolution)
         success =  problem.solve()
         if not success:
+            self.switch_mode(Mode.ERROR)
             return
         planned_path = problem.path
 
@@ -331,7 +342,7 @@ class Navigator:
 
         self.switch_mode(Mode.TRACK)
 
-    def navigate(self):
+    def update_state(self):
         # try to get state information to update self.x, self.y, self.theta
         try:
             (translation,rotation) = self.trans_listener.lookupTransform('/map', '/base_footprint', rospy.Time(0))
@@ -339,16 +350,19 @@ class Navigator:
             self.y = translation[1]
             euler = tf.transformations.euler_from_quaternion(rotation)
             self.theta = euler[2]
+            return True
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException) as e:
+            return False
+
+    def navigate(self):
+        if not self.update_state():
             self.current_plan = []
             rospy.loginfo("Navigator: waiting for state info")
-            self.switch_mode(Mode.IDLE)
-            print e
-            pass
+            self.switch_mode(Mode.ERROR)
 
         # STATE MACHINE LOGIC
         # some transitions handled by callbacks
-        if self.mode == Mode.IDLE:
+        if self.mode == Mode.IDLE or self.mode == Mode.ERROR:
             pass
         elif self.mode == Mode.ALIGN:
             if self.aligned():
@@ -361,13 +375,6 @@ class Navigator:
                 self.replan()
             elif (rospy.get_rostime() - self.current_plan_start_time).to_sec() > self.current_plan_duration:
                 self.replan() # we aren't near the goal but we thought we should have been, so replan
-        elif self.mode == Mode.PARK:
-            if self.at_goal():
-                # forget about goal:
-                self.x_g = None
-                self.y_g = None
-                self.theta_g = None
-                self.switch_mode(Mode.IDLE)
 
         self.publish_control()
         

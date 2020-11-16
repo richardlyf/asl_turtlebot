@@ -53,7 +53,7 @@ class MarkerTracker:
         self.heading[marker.id] = theta
         self.marker_publishers[marker.id].publish(marker)
 
-    def get_robot_pose(self, target_name, distance):
+    def get_goal_pose(self, target_name, distance):
         """
         Given the target and distance from the vendor, computes the 
         position the robot should travel to.
@@ -62,6 +62,8 @@ class MarkerTracker:
             return
         marker_id = self.target_names.index(target_name)
         theta = self.heading[marker_id]
+        if theta is None:
+            return
         x, y = self.marker_locations[marker_id]
         x += np.cos(theta) * distance
         y += np.sin(theta) * distance

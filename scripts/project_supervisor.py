@@ -98,10 +98,16 @@ class Supervisor:
         self.error_pos = []
         self.cov = [[0.5, 0], [0, 0.5]]
 
+        # Remember the last time cat/dog is seen
+        self.seen_cat = 0
+        self.seen_dog = 0
+
         ########## PUBLISHERS ##########
         # Command vel (used for idling)
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
         self.nav_goal_publisher = rospy.Publisher('/cmd_nav', Pose2D, queue_size=10)
+        self.cat_publisher = rospy.Publisher('/cat', String, queue_size=10)
+        self.dog_publisher = rospy.Publisher('/dog', String, queue_size=10)
 
         ########## SUBSCRIBERS ##########
         # Stop sign detector
@@ -111,7 +117,10 @@ class Supervisor:
             rospy.Subscriber('/detector/' + vendor_name, DetectedObject, self.vendor_detected_callback)
         # Request subscriber
         rospy.Subscriber('/delivery_request', String, self.request_callback) 
-                
+        # Animal detectors
+        rospy.Subscriber('/detector/cat', DetectedObject, self.cat_callback)
+        rospy.Subscriber('/detector/dog', DetectedObject, self.dog_callback)
+
     def publish_goal_pose(self, goal):
         """ sends the current desired pose to the navigator """
         pose_g_msg = Pose2D()
@@ -168,6 +177,18 @@ class Supervisor:
         rospy.loginfo("Received order %s", self.order_list)
         # TODO order_list should be updated to be in pick up order
         self.order_list.append("home")
+
+    def cat_callback(self, msg):
+        
+        if rospy.get_time() - self.seen_cat > 3:
+            self.cat_publisher.publish('MEOWWWWWWWWWWW')
+        self.seen_cat = rospy.get_time()
+
+    def dog_callback(self, msg):
+        
+        if rospy.get_time() - self.seen_dog > 3:
+            self.dog_publisher.publish('woof woof woof')
+        self.seen_dog = rospy.get_time()
 
     ########## STATE MACHINE ACTIONS ##########
     def stay_idle(self):

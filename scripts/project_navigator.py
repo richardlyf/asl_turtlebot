@@ -120,7 +120,7 @@ class Navigator:
         self.at_thresh_theta = 0.05
 
         # trajectory smoothing
-        self.spline_alpha = 0.1
+        self.spline_alpha = 0.03
         self.traj_dt = 0.1
 
         # trajectory tracking controller parameters
@@ -162,12 +162,12 @@ class Navigator:
         """
         loads in goal if different from current goal, and replans
         """
-        if data.x != self.x_g or data.y != self.y_g or data.theta != self.theta_g:
-            X_g = nearest_free(
-                (data.x, data.y), self.occupancy, self.plan_resolution)
-            if not X_g:
-                rospy.loginfo("Nav goal not free! Ignoring.")
-                return
+        X_g = nearest_free(
+            (data.x, data.y), self.occupancy, self.plan_resolution)
+        if not X_g:
+            rospy.loginfo("Nav goal not free! Ignoring.")
+            return
+        if X_g[0] != self.x_g or X_g[1] != self.y_g or data.theta != self.theta_g:
             self.x_g, self.y_g = X_g
             self.theta_g = data.theta
             self.new_goal = True
@@ -334,7 +334,7 @@ class Navigator:
         # Attempt to plan a path
         state_min = self.snap_to_grid((-self.plan_horizon, -self.plan_horizon))
         state_max = self.snap_to_grid((self.plan_horizon, self.plan_horizon))
-        x_init = self.snap_to_grid((self.x, self.y))
+        x_init = nearest_free((self.x, self.y), self.occupancy, self.plan_resolution)
         self.plan_start = x_init
         problem = AStar(state_min,state_max,x_init,X_g,self.occupancy,self.plan_resolution)
         success =  problem.solve()

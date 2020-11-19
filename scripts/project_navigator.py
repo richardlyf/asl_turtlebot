@@ -26,6 +26,45 @@ class Mode(Enum):
     PARK = 3
     ERROR = 4
 
+
+def snap_to_grid(x, res):
+    """Snap point `x` to grid with resolution `res`."""
+    return (res * round(x[0] / res), res * round(x[1] / res))
+
+
+def nearest_free(p, g, r):
+    """Get the nearest free point on an occupancy grid.
+    
+    Args:
+        g: Occupancy grid
+        p: Point to search near
+        r: Grid resolution for search
+    """
+    # Is this too slow? I don't know of anything better we could do since we're
+    # receiving a new occupancy grid all the time.
+    x, y = snap_to_grid(p, r)
+    for d in range(1, 10):
+        o_a = d * r
+        x_ap = x + o_a
+        x_am = x - o_a
+        y_ap = y + o_a
+        y_am = y - o_a
+        for i in range(d):
+            o_b = i * r
+            y_bp = y + o_b
+            y_bm = y - o_b - r
+            x_bp = x + o_b
+            x_bm = x - o_b - r
+            if g.is_free((x_ap, y_bp)): return (x_ap, y_bp)
+            if g.is_free((x_am, y_bp)): return (x_am, y_bp)
+            if g.is_free((x_bp, y_ap)): return (x_bp, y_ap)
+            if g.is_free((x_bp, y_am)): return (x_bp, y_am)
+            if g.is_free((x_ap, y_bm)): return (x_ap, y_bm)
+            if g.is_free((x_am, y_bm)): return (x_am, y_bm)
+            if g.is_free((x_bm, y_ap)): return (x_bm, y_ap)
+            if g.is_free((x_bm, y_am)): return (x_bm, y_am)
+
+
 class Navigator:
     """
     This node handles point to point turtlebot motion, avoiding obstacles.
@@ -81,7 +120,7 @@ class Navigator:
         self.at_thresh_theta = 0.05
 
         # trajectory smoothing
-        self.spline_alpha = 0.15
+        self.spline_alpha = 0.1
         self.traj_dt = 0.1
 
         # trajectory tracking controller parameters
@@ -124,8 +163,12 @@ class Navigator:
         loads in goal if different from current goal, and replans
         """
         if data.x != self.x_g or data.y != self.y_g or data.theta != self.theta_g:
-            self.x_g = data.x
-            self.y_g = data.y
+            X_g = nearest_free(
+                (data.x, data.y), self.occupancy, self.plan_resolution)
+            if not X_g:
+                rospy.loginfo("Nav goal not free! Ignoring.")
+                return
+            self.x_g, self.y_g = X_g
             self.theta_g = data.theta
             self.new_goal = True
             rospy.loginfo("new goal received, replanning")
@@ -201,7 +244,7 @@ class Navigator:
         return (abs(self.x - self.plan_start[0]) < self.start_pos_thresh and abs(self.y - self.plan_start[1]) < self.start_pos_thresh)
 
     def snap_to_grid(self, x):
-        return (self.plan_resolution*round(x[0]/self.plan_resolution), self.plan_resolution*round(x[1]/self.plan_resolution))
+        return snap_to_grid(x, self.plan_resolution)
 
     def switch_mode(self, new_mode):
         # logs the current mode
@@ -223,7 +266,7 @@ class Navigator:
             path_msg.poses.append(pose_st)
         publisher.publish(path_msg)
 
-    def publish_smoothed_path(self, traj, publisher):
+    def _publish_smoothed_path(self, traj, publisher):
         # publish planned plan for visualization
         path_msg = Path()
         path_msg.header.frame_id = 'map'
@@ -276,25 +319,24 @@ class Navigator:
         # Make sure we have a map
         if not self.occupancy:
             rospy.loginfo("Navigator: replanning canceled, waiting for occupancy map.")
-            self.switch_mode(Mode.ERROR)
             return
 
         # Check if the goal is free
-        if not self.occupancy.is_free((self.x_g, self.y_g)):
-            rospy.loginfo("Goal position %s invalid since it's not free!", (self.x_g, self.y_g))  
-            self.switch_mode(Mode.ERROR)
+        if not self.x_g or not self.y_g or not self.theta_g:
+            rospy.loginfo("No goal.")
             return
 
+        X_g = (self.x_g, self.y_g)
+
         # Before planning a path, load goal pose
-        self.pose_controller.load_goal(self.x_g, self.y_g, self.theta_g)
+        self.pose_controller.load_goal(X_g[0], X_g[1], self.theta_g)
 
         # Attempt to plan a path
         state_min = self.snap_to_grid((-self.plan_horizon, -self.plan_horizon))
         state_max = self.snap_to_grid((self.plan_horizon, self.plan_horizon))
         x_init = self.snap_to_grid((self.x, self.y))
         self.plan_start = x_init
-        x_goal = self.snap_to_grid((self.x_g, self.y_g))
-        problem = AStar(state_min,state_max,x_init,x_goal,self.occupancy,self.plan_resolution)
+        problem = AStar(state_min,state_max,x_init,X_g,self.occupancy,self.plan_resolution)
         success =  problem.solve()
         if not success:
             self.switch_mode(Mode.ERROR)
@@ -320,12 +362,12 @@ class Navigator:
             t_remaining_new = t_init_align + t_new[-1]
 
             if t_remaining_new > t_remaining_curr and not self.new_goal:
-                self.publish_smoothed_path(traj_new, self.nav_smoothed_path_rej_pub)
+                self._publish_smoothed_path(traj_new, self.nav_smoothed_path_rej_pub)
                 return
 
         # Otherwise follow the new plan
         self.publish_planned_path(planned_path, self.nav_planned_path_pub)
-        self.publish_smoothed_path(traj_new, self.nav_smoothed_path_pub)
+        self._publish_smoothed_path(traj_new, self.nav_smoothed_path_pub)
 
         self.traj_controller.load_traj(t_new, traj_new)
 

@@ -1408,18 +1408,18 @@
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
     <state world_name='default'>
-      <sim_time>189 929000000</sim_time>
-      <real_time>190 513808414</real_time>
-      <wall_time>1605296894 262688879</wall_time>
-      <iterations>189929</iterations>
+      <sim_time>1298 913000000</sim_time>
+      <real_time>504 798077847</real_time>
+      <wall_time>1605794911 370706447</wall_time>
+      <iterations>503497</iterations>
       <model name='Stop Sign'>
-        <pose frame=''>1.96326 1.91611 -8e-06 -0.000113 -0.000264 1.02794</pose>
+        <pose frame=''>1.96326 1.91611 2e-06 4e-05 0.000226 1.02794</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose frame=''>1.96326 1.91611 -8e-06 -0.000113 -0.000264 1.02794</pose>
+          <pose frame=''>1.96326 1.91611 2e-06 4e-05 0.000226 1.02794</pose>
           <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 -9.8 0 -0 0</acceleration>
-          <wrench>0 0 -9.8 0 -0 0</wrench>
+          <acceleration>0 0 -0.00048 0.043446 -0.05304 -0</acceleration>
+          <wrench>0 0 -0.00048 0 -0 0</wrench>
         </link>
       </model>
       <model name='apple'>
@@ -1437,6 +1437,66 @@
         <scale>1 1 1</scale>
         <link name='link'>
           <pose frame=''>2.61211 1.62009 0.301643 0 -0 1.59321</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='cat'>
+        <pose frame=''>1.86 1.85 0.35 0 -0 1.57</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose frame=''>1.86 1.85 0.35 0 -0 1.57</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='cat_0'>
+        <pose frame=''>3.47 0.03 0.35 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose frame=''>3.47 0.03 0.35 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='cat_1'>
+        <pose frame=''>3.25 3.00846 0.35 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose frame=''>3.25 3.00846 0.35 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='dog'>
+        <pose frame=''>3.28607 0.036745 0.35 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose frame=''>3.28607 0.036745 0.35 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='dog_0'>
+        <pose frame=''>3.20003 -0.871221 0 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose frame=''>3.20003 -0.871221 0 0 -0 0</pose>
+          <velocity>0 0 0 0 -0 0</velocity>
+          <acceleration>0 0 0 0 -0 0</acceleration>
+          <wrench>0 0 0 0 -0 0</wrench>
+        </link>
+      </model>
+      <model name='dog_1'>
+        <pose frame=''>3.45 3 0.35 0 -0 0</pose>
+        <scale>1 1 1</scale>
+        <link name='link'>
+          <pose frame=''>3.45 3 0.35 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -1593,10 +1653,10 @@
         </link>
       </model>
       <model name='wall_20'>
-        <pose frame=''>2.1844 2.38761 0 0 0 -1.5708</pose>
+        <pose frame=''>2.1844 2.38761 0 -0.028195 0 -1.5708</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose frame=''>2.1844 2.38761 0 0 0 -1.5708</pose>
+          <pose frame=''>2.1844 2.38761 0 -0.028195 0 -1.5708</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -1693,10 +1753,10 @@
         </link>
       </model>
       <model name='wall_6'>
-        <pose frame=''>2.286 3.04801 0 0 -0 0</pose>
+        <pose frame=''>2.28135 3.03865 0 0 -0 0</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose frame=''>2.286 3.04801 0 0 -0 0</pose>
+          <pose frame=''>2.28135 3.03865 0 0 -0 0</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -1738,10 +1798,280 @@
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose frame=''>4.88074 1.59895 3.85044 0 1.01164 2.99219</pose>
+        <pose frame=''>3.39437 2.26237 2.40549 -8e-06 1.271 1.64601</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
     </gui>
+    <model name='cat'>
+      <static>1</static>
+      <link name='link'>
+        <pose frame=''>0 0 0 0 -0 0</pose>
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://cat/materials/scripts</uri>
+              <uri>model://cat/materials/textures</uri>
+              <name>vrc/cat</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <kinematic>0</kinematic>
+        <gravity>1</gravity>
+      </link>
+      <pose frame=''>1.56057 1.55043 0 0 -0 0</pose>
+    </model>
+    <model name='dog'>
+      <static>1</static>
+      <link name='link'>
+        <pose frame=''>0 0 0 0 -0 0</pose>
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://dog/materials/scripts</uri>
+              <uri>model://dog/materials/textures</uri>
+              <name>vrc/dog</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <kinematic>0</kinematic>
+        <gravity>1</gravity>
+      </link>
+      <pose frame=''>3.28607 0.036745 0 0 -0 0</pose>
+    </model>
+    <model name='cat_0'>
+      <static>1</static>
+      <link name='link'>
+        <pose frame=''>0 0 0 0 -0 0</pose>
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://cat/materials/scripts</uri>
+              <uri>model://cat/materials/textures</uri>
+              <name>vrc/cat</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <kinematic>0</kinematic>
+        <gravity>1</gravity>
+      </link>
+      <pose frame=''>3.51983 0.04593 0 0 -0 0</pose>
+    </model>
+    <model name='cat_1'>
+      <static>1</static>
+      <link name='link'>
+        <pose frame=''>0 0 0 0 -0 0</pose>
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://cat/materials/scripts</uri>
+              <uri>model://cat/materials/textures</uri>
+              <name>vrc/cat</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <kinematic>0</kinematic>
+        <gravity>1</gravity>
+      </link>
+      <pose frame=''>3.32809 3.00846 0 0 -0 0</pose>
+    </model>
+    <model name='dog_0'>
+      <static>1</static>
+      <link name='link'>
+        <pose frame=''>0 0 0 0 -0 0</pose>
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://dog/materials/scripts</uri>
+              <uri>model://dog/materials/textures</uri>
+              <name>vrc/dog</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <kinematic>0</kinematic>
+        <gravity>1</gravity>
+      </link>
+      <pose frame=''>3.20003 -0.871221 0 0 -0 0</pose>
+    </model>
+    <model name='dog_1'>
+      <static>1</static>
+      <link name='link'>
+        <pose frame=''>0 0 0 0 -0 0</pose>
+        <collision name='collision'>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision>
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <box>
+              <size>0.1615 0.001 0.1615</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>model://dog/materials/scripts</uri>
+              <uri>model://dog/materials/textures</uri>
+              <name>vrc/dog</name>
+            </script>
+          </material>
+        </visual>
+        <self_collide>0</self_collide>
+        <kinematic>0</kinematic>
+        <gravity>1</gravity>
+      </link>
+      <pose frame=''>3.53217 2.92406 0 0 -0 0</pose>
+    </model>
   </world>
 </sdf>

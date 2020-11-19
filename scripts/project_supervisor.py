@@ -181,12 +181,14 @@ class Supervisor:
     def cat_callback(self, msg):
         
         if rospy.get_time() - self.seen_cat > 3:
+            rospy.loginfo("MEOWWWWWWWWWWW")
             self.cat_publisher.publish('MEOWWWWWWWWWWW')
         self.seen_cat = rospy.get_time()
 
     def dog_callback(self, msg):
         
         if rospy.get_time() - self.seen_dog > 3:
+            rospy.loginfo("woof woof woof")
             self.dog_publisher.publish('woof woof woof')
         self.seen_dog = rospy.get_time()
 

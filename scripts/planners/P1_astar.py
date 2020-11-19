@@ -7,10 +7,11 @@ from utils import plot_line_segments
 class AStar(object):
     """Represents a motion planning problem to be solved using A*"""
 
-    def __init__(self, statespace_lo, statespace_hi, x_init, x_goal, occupancy, resolution=1):
+    def __init__(self, statespace_lo, statespace_hi, x_init, x_goal, occupancy_strict, occupancy, resolution=1):
         self.statespace_lo = statespace_lo         # state space lower bound (e.g., [-5, -5])
         self.statespace_hi = statespace_hi         # state space upper bound (e.g., [5, 5])
-        self.occupancy = occupancy                 # occupancy grid
+        self.occupancy_strict = occupancy_strict   # occupancy grid
+        self.occupancy = occupancy                 # larger window size than strict
         self.resolution = resolution               # resolution of the discretization of state space (cell/m)
         self.x_init = self.snap_to_grid(x_init)    # initial state
         self.x_goal = self.snap_to_grid(x_goal)    # goal state
@@ -41,7 +42,7 @@ class AStar(object):
         Hint: look at the usage for the DetOccupancyGrid2D.is_free() method
         """
         ########## Code starts here ##########
-        return  self.occupancy.is_free(x) and \
+        return  self.occupancy_strict.is_free(x) and \
                 x[0] >= self.statespace_lo[0] and \
                 x[0] <= self.statespace_hi[0] and \
                 x[1] >= self.statespace_lo[1] and \
@@ -183,7 +184,7 @@ class AStar(object):
             for x_neighbor in self.get_neighbors(x_current):
                 if x_neighbor in self.closed_set:
                     continue
-                tentative_cost_to_arrive = self.cost_to_arrive[x_current] + self.distance(x_current, x_neighbor)
+                tentative_cost_to_arrive = self.cost_to_arrive[x_current] + self.distance(x_current, x_neighbor) * (1 + self.occupancy.prob_is_occupied(x_neighbor))
                 if x_neighbor not in self.open_set:
                     self.open_set.add(x_neighbor)
                 elif tentative_cost_to_arrive > self.cost_to_arrive[x_neighbor]:

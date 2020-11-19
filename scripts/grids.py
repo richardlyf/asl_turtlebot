@@ -47,6 +47,9 @@ class StochOccupancyGrid2D(object):
         return (self.resolution*round(x[0]/self.resolution), self.resolution*round(x[1]/self.resolution))
 
     def is_free(self, state):
+        return self.prob_is_occupied(state) < self.thresh
+
+    def prob_is_occupied(self, state):
         # combine the probabilities of each cell by assuming independence
         # of each estimation
         p_total = 1.0
@@ -59,7 +62,7 @@ class StochOccupancyGrid2D(object):
                 grid_y = int((y - self.origin_y) / self.resolution)
                 if grid_y>0 and grid_x>0 and grid_x<self.width and grid_y<self.height:
                     p_total *= (1.0-max(0.0,float(self.probs[grid_y * self.width + grid_x])/100.0))
-        return (1.0-p_total) < self.thresh
+        return 1.0-p_total
 
     def plot(self, fig_num=0):
         fig = plt.figure(fig_num)

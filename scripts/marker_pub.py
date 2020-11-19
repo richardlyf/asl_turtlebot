@@ -76,3 +76,35 @@ class MarkerTracker:
             return
         marker_id = self.target_names.index(target_name)
         return self.marker_locations[marker_id]
+
+
+def publish_marker(target_name, pos, unique_id, color):
+    publisher = rospy.Publisher('marker_' + target_name, Marker, queue_size=10)
+    marker = Marker()
+    marker.header.frame_id = "map"
+    marker.header.stamp = rospy.Time()
+    marker.id = unique_id
+
+    marker.type = 2 # sphere
+
+    marker.pose.position.x = pos[0]
+    marker.pose.position.y = pos[1]
+    marker.pose.position.z = 0
+
+    marker.pose.orientation.x = 0
+    marker.pose.orientation.y = 0
+    marker.pose.orientation.z = 0
+    marker.pose.orientation.w = 1.0
+
+    marker.scale.x = 0.1
+    marker.scale.y = 0.1
+    marker.scale.z = 0.1
+
+    marker.color.a = 1.0
+    marker.color.r = color[0]
+    marker.color.g = color[1]
+    marker.color.b = color[2]
+    
+    publisher.publish(marker)
+
+

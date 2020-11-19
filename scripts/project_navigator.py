@@ -14,6 +14,7 @@ import scipy.interpolate
 import matplotlib.pyplot as plt
 from controllers import PoseController, TrajectoryTracker, HeadingController
 from enum import Enum
+from marker_pub import publish_marker
 
 from dynamic_reconfigure.server import Server
 from asl_turtlebot.cfg import NavigatorConfig
@@ -24,7 +25,6 @@ class Mode(Enum):
     ALIGN = 1
     TRACK = 2
     PARK = 3
-    ERROR = 4
 
 
 def snap_to_grid(x, res):
@@ -43,6 +43,7 @@ def nearest_free(p, g, r):
     # Is this too slow? I don't know of anything better we could do since we're
     # receiving a new occupancy grid all the time.
     x, y = snap_to_grid(p, r)
+    if g.is_free((x, y)): return (x, y)
     for d in range(1, 10):
         o_a = d * r
         x_ap = x + o_a
@@ -163,11 +164,12 @@ class Navigator:
         loads in goal if different from current goal, and replans
         """
         X_g = nearest_free(
-            (data.x, data.y), self.occupancy, self.plan_resolution)
+            (data.x, data.y), self.occupancy_strict, self.plan_resolution)
         if not X_g:
             rospy.loginfo("Nav goal not free! Ignoring.")
             return
         if X_g[0] != self.x_g or X_g[1] != self.y_g or data.theta != self.theta_g:
+            publish_marker("goal", (X_g[0], X_g[1]), 100, (0, 0, 1))
             self.x_g, self.y_g = X_g
             self.theta_g = data.theta
             self.new_goal = True
@@ -196,6 +198,13 @@ class Navigator:
                                                   self.map_origin[0],
                                                   self.map_origin[1],
                                                   10, # Increasing window size inflates obstacles
+                                                  self.map_probs)
+            self.occupancy_strict = StochOccupancyGrid2D(self.map_resolution,
+                                                  self.map_width,
+                                                  self.map_height,
+                                                  self.map_origin[0],
+                                                  self.map_origin[1],
+                                                  8, # Increasing window size inflates obstacles
                                                   self.map_probs)
             if self.x_g is not None:
                 # if we have a goal to plan to, replan
@@ -334,12 +343,11 @@ class Navigator:
         # Attempt to plan a path
         state_min = self.snap_to_grid((-self.plan_horizon, -self.plan_horizon))
         state_max = self.snap_to_grid((self.plan_horizon, self.plan_horizon))
-        x_init = nearest_free((self.x, self.y), self.occupancy, self.plan_resolution)
+        x_init = nearest_free((self.x, self.y), self.occupancy_strict, self.plan_resolution)
         self.plan_start = x_init
-        problem = AStar(state_min,state_max,x_init,X_g,self.occupancy,self.plan_resolution)
+        problem = AStar(state_min,state_max,x_init,X_g,self.occupancy_strict,self.occupancy,self.plan_resolution)
         success =  problem.solve()
         if not success:
-            self.switch_mode(Mode.ERROR)
             return
         planned_path = problem.path
 
@@ -400,11 +408,10 @@ class Navigator:
         if not self.update_state():
             self.current_plan = []
             rospy.loginfo("Navigator: waiting for state info")
-            self.switch_mode(Mode.ERROR)
 
         # STATE MACHINE LOGIC
         # some transitions handled by callbacks
-        if self.mode == Mode.IDLE or self.mode == Mode.ERROR:
+        if self.mode == Mode.IDLE:
             pass
         elif self.mode == Mode.ALIGN:
             if self.aligned():

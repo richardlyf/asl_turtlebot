@@ -244,27 +244,6 @@ class Supervisor:
             if self.mode != Mode.MANUAL:
                 self.init_wait()
 
-        # Error position handling
-        elif self.navigator.mode == NavMode.ERROR:
-            # TODO: This is buggy still. A nav_cmd is published many times, and we try to
-            # send a new cmd too quickly, before the subscriber queue is able to drain?
-            return
-            pos = (self.navigator.x_g, self.navigator.y_g)
-            # If the goal that errored wasn't known, treat it as a new goal
-            if pos not in self.error_pos:
-                self.error_pos = [pos]
-            # If the same goal was retried too many times, give up
-            if len(self.error_pos) >= self.retry_limit:
-                rospy.loginfo("Retried around %s %s times, giving up...", self.error_pos[0], len(self.error_pos))
-                if self.mode != Mode.MANUAL:
-                    self.mode = Mode.READY
-                self.navigator.switch_mode(NavMode.IDLE)
-            else:
-                original_pos = self.error_pos[0]
-                new_pos = tuple(np.random.multivariate_normal(original_pos, self.cov))
-                self.error_pos.append(new_pos)
-                self.publish_goal_pose((new_pos[0], new_pos[1], self.navigator.theta_g))
-
         elif self.mode == Mode.WAITING:
             # Waiting to load or unload food
             self.stay_idle()

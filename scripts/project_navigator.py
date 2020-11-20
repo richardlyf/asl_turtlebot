@@ -163,6 +163,7 @@ class Navigator:
         x_max = self.snap_to_grid((self.plan_horizon, self.plan_horizon))
         x_i = nearest_free((self.x, self.y), self.occupancy_strict, self.plan_resolution)
         x_g = nearest_free((pose[0], pose[1]), self.occupancy_strict, self.plan_resolution)
+        publish_marker("goal", (x_g[0], x_g[1]), 100, (0, 0, 1))
         problem = AStar(x_min, x_max, x_i, x_g, self.occupancy_strict, self.occupancy, self.plan_resolution)
         success =  problem.solve()
         if not success:

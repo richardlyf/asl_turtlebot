@@ -49,8 +49,16 @@ class MarkerTracker:
         marker.color.g = 0.0
         marker.color.b = 0.0
         
-        self.marker_locations[marker.id] = target_pos
-        self.heading[marker.id] = theta
+        if self.heading[marker.id] is None:
+            self.marker_locations[marker.id] = target_pos
+            self.heading[marker.id] = theta
+        else:
+            prev_x, prev_y = self.marker_locations[marker.id]
+            x = prev_x * 0.9 + target_pos[0] * 0.1
+            y = prev_y * 0.9 + target_pos[1] * 0.1
+            self.marker_locations[marker.id] = (x,y)
+            self.heading[marker.id] *= 0.9
+            self.heading[marker.id] += 0.1 * theta
         self.marker_publishers[marker.id].publish(marker)
 
     def get_goal_pose(self, target_name, distance):

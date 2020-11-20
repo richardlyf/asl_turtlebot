@@ -172,7 +172,7 @@ Visualization Manager:
       Marker Topic: /marker_apple
       Name: Marker
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -186,6 +186,14 @@ Visualization Manager:
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /marker_stop_sign
+      Name: Marker
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /marker_pizza
       Name: Marker
       Namespaces:
         "": true
@@ -252,5 +260,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1640
-  X: 105
-  Y: 224
+  X: 11
+  Y: 44

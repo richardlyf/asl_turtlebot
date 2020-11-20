@@ -10,6 +10,7 @@ Panels:
         - /Marker1
         - /Marker2
         - /Marker3
+        - /Marker4
       Splitter Ratio: 0.5
     Tree Height: 687
   - Class: rviz/Selection
@@ -163,7 +164,7 @@ Visualization Manager:
       Marker Topic: /marker_banana
       Name: Marker
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -171,12 +172,20 @@ Visualization Manager:
       Marker Topic: /marker_apple
       Name: Marker
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
       Enabled: true
       Marker Topic: /marker_goal
+      Name: Marker
+      Namespaces:
+        "": true
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /marker_stop_sign
       Name: Marker
       Namespaces:
         "": true
@@ -243,5 +252,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1640
-  X: 55
-  Y: -30
+  X: 105
+  Y: 224

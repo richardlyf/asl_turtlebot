@@ -9,7 +9,7 @@ from geometry_msgs.msg import Twist, PoseArray, Pose2D, PoseStamped
 from std_msgs.msg import Float32MultiArray, String
 from project_navigator import Navigator
 from project_navigator import Mode as NavMode
-from marker_pub import MarkerTracker
+from marker_pub import MarkerTracker, publish_marker
 import tf
 import math
 import numpy as np
@@ -49,7 +49,7 @@ class SupervisorParams:
         self.wait_time = rospy.get_param("~wait_time", 3.)
         
         # Minimum distance from a stop sign to obey it
-        self.stop_min_dist = rospy.get_param("~stop_min_dist", 1)
+        self.stop_min_dist = rospy.get_param("~stop_min_dist", 0.5)
 
         # Time taken to cross an intersection
         self.crossing_time = rospy.get_param("~crossing_time", 3.)
@@ -86,17 +86,15 @@ class Supervisor:
         self.vendor_names = ["apple", "banana", "pizza", "kite"]
         self.marker_tracker = MarkerTracker(self.vendor_names)
 
+        # Remember stop sign locations
+        self.stop_sign_pose = None
+
         # Remember the current order
         self.order_list = None
         self.order_repeat_count = 0
         self.order_repeat_max = 10 # A given order is published 10 times
         self.vendor_dist = 0.2 # How far away to park from vendor
         self.home_pose = (self.navigator.x, self.navigator.y, self.navigator.theta)
-
-        # Error handling
-        self.retry_limit = 10
-        self.error_pos = []
-        self.cov = [[0.5, 0], [0, 0.5]]
 
         # Remember the last time cat/dog is seen
         self.seen_cat = 0
@@ -130,23 +128,11 @@ class Supervisor:
         self.nav_goal_publisher.publish(pose_g_msg)
 
     ########## SUBSCRIBER CALLBACKS ##########
-    def stop_sign_detected_callback(self, msg):
-        """ callback for when the detector has found a stop sign. Note that
-        a distance of 0 can mean that the lidar did not pickup the stop sign at all """
-
-        # distance of the stop sign
-        dist = msg.distance
-
-        # if close enough and in nav mode, stop
-        if dist > 0 and dist < self.params.stop_min_dist and self.mode == Mode.NAV:
-            self.init_stop_sign()
-
-    def vendor_detected_callback(self, msg):
-        # Do not update vendor once we're done exploring
-        if self.mode != Mode.MANUAL:
-            return
-
-        # compute the angle of the vendor relative to the robot
+    def estimate_pose(self, msg):
+        """
+        estimates the position of the detected target based on the current robot position
+        """
+        # compute the angle of the target relative to the robot
         theta_left = msg.thetaleft
         theta_right = msg.thetaright
         if theta_left > math.pi:
@@ -157,16 +143,33 @@ class Supervisor:
         if avg_theta != 0:
             avg_theta /= 2.
 
+        # compute position of the detected 
+        self.navigator.update_state()
+        global_theta = avg_theta + self.navigator.theta
+        x = self.navigator.x + np.cos(global_theta) * msg.distance 
+        y = self.navigator.y + np.sin(global_theta) * msg.distance 
+        # returned theta is the angle of the target facing robot
+        return x, y, global_theta - np.pi
+
+
+    def stop_sign_detected_callback(self, msg):
+        """ callback for when the detector has found a stop sign. Note that
+        a distance of 0 can mean that the lidar did not pickup the stop sign at all """
+        if self.mode == Mode.STOP or self.mode == Mode.CROSS:
+            return
+        self.stop_sign_pose = self.estimate_pose(msg)
+        publish_marker("stop_sign", (self.stop_sign_pose[0], self.stop_sign_pose[1]), 404, (1, 0, 0))
+
+    def vendor_detected_callback(self, msg):
+        # Do not update vendor once we're done exploring
+        if self.mode != Mode.MANUAL:
+            return
+
+        vendor_x, vendor_y, global_theta = self.estimate_pose(msg)
         # Ad hoc solution for pizza being detected as kite
         if msg.name == "kite":
             msg.name = "pizza"
-        # compute position of the detected vendor
-        self.navigator.update_state()
-        global_theta = avg_theta + self.navigator.theta
-        vendor_x = self.navigator.x + np.cos(global_theta) * msg.distance 
-        vendor_y = self.navigator.y + np.sin(global_theta) * msg.distance 
-
-        self.marker_tracker.place_marker(msg.name, (vendor_x, vendor_y), global_theta - np.pi)
+        self.marker_tracker.place_marker(msg.name, (vendor_x, vendor_y), global_theta)
 
     def request_callback(self, msg):
         if self.mode == Mode.MANUAL:
@@ -205,6 +208,24 @@ class Supervisor:
         vel_g_msg = Twist()
         self.cmd_vel_publisher.publish(vel_g_msg)
 
+    def check_stop_sign(self):
+        """ check if close to stop sign and should stop"""
+        if self.stop_sign_pose is None:
+            publish_marker("stop_sign", (-1, -1), 404, (1, 0, 0))
+            return
+        self.navigator.update_state()
+        # TODO maybe if the stop sign and the robot are not facing each other, ignore
+        # The angle can be hard to estimate
+
+        # If the robot is close enough to the stop sign, stop
+        stop_sign_loc = np.array([self.stop_sign_pose[0], self.stop_sign_pose[1]]) 
+        robot_loc = np.array([self.navigator.x, self.navigator.y])
+        dist = np.linalg.norm(stop_sign_loc - robot_loc)
+        if dist > 0 and dist < self.params.stop_min_dist and self.mode == Mode.NAV:
+            self.init_stop_sign()
+            self.stop_sign_pose = None
+            publish_marker("stop_sign", (-1, -1), 404, (1, 0, 0))
+
     def init_stop_sign(self):
         """ initiates a stop sign maneuver """
         self.stop_sign_start = rospy.get_rostime()
@@ -241,6 +262,7 @@ class Supervisor:
         """ the main loop of the robot. At each iteration, depending on its
         mode (i.e. the finite state machine's state), if takes appropriate
         actions. This function shouldn't return anything """
+        self.check_stop_sign()
 
         # logs the current mode
         if self.prev_mode != self.mode:

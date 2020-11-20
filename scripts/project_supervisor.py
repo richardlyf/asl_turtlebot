@@ -347,6 +347,7 @@ class Supervisor:
             # At a stop sign
             self.stay_idle()
             if self.has_stopped():
+                self.navigator.replan(force=True)
                 self.init_crossing()	
 
         elif self.mode == Mode.CROSS:

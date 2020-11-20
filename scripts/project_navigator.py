@@ -341,7 +341,7 @@ class Navigator:
         t = (rospy.get_rostime()-self.current_plan_start_time).to_sec()
         return max(0.0, t)  # clip negative time to 0
 
-    def replan(self):
+    def replan(self, force=False):
         """
         loads goal into pose controller
         runs planner based on current pose
@@ -400,7 +400,7 @@ class Navigator:
             t_init_align = abs(th_err/self.om_max)
             t_remaining_new = t_init_align + t_new[-1]
 
-            if t_remaining_new > t_remaining_curr and not self.new_goal:
+            if t_remaining_new > t_remaining_curr and not (self.new_goal or force):
                 self._publish_smoothed_path(traj_new, self.nav_smoothed_path_rej_pub)
                 return
 

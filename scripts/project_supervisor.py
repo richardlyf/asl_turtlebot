@@ -90,11 +90,15 @@ class Supervisor:
         self.stop_sign_pose = None
 
         # Remember the current order
-        self.order_list = None
+        self.orders = []
         self.order_repeat_count = 0
         self.order_repeat_max = 10 # A given order is published 10 times
         self.vendor_dist = 0.2 # How far away to park from vendor
         self.home_pose = (self.navigator.x, self.navigator.y, self.navigator.theta)
+
+        # Whether we should go home if we reach the ready state and there are
+        # no more orders.
+        self._should_go_home = False
 
         # Remember the last time cat/dog is seen
         self.seen_cat = 0
@@ -183,10 +187,11 @@ class Supervisor:
         if msg.data == '':
             return
         # Parse the vendors
-        self.order_list = msg.data.split(",")
-        rospy.loginfo("Received order %s", self.order_list)
-        # TODO order_list should be updated to be in pick up order
-        self.order_list.append("home")
+        new_orders = msg.data.split(",")
+        if "home" in new_orders:
+            self._should_go_home = True
+        self.orders.extend(x for x in new_orders if x != "home")
+        rospy.loginfo("Received order %s", new_orders)
 
     def cat_callback(self, msg):
         
@@ -256,6 +261,40 @@ class Supervisor:
         return self.mode == Mode.CROSS and \
                rospy.get_rostime() - self.cross_start > rospy.Duration.from_sec(self.params.crossing_time)
 
+    def _pop_next_order(self):
+        """Find, remove, and return the next destination we should go to.
+
+        Greedily chooses the next destination based on which is closest.
+        Returns a solved Astar plan if one is found, or None otherwise.
+        """
+        if not self.orders:
+            return None
+        plans = []
+        bad_orders = []
+        for i, order in enumerate(self.orders):
+            pose = self.marker_tracker.get_goal_pose(order, self.vendor_dist)
+            if not pose:
+                rospy.loginfo("Vendor '%s' unknown. Skipping.", order)
+                bad_orders.append(order)
+                continue
+            plan = self.navigator.plan_to(pose)
+            if not plan:
+                rospy.loginfo("Vendor '%s' unreachable. Skipping.", order)
+                bad_orders.append(order)
+                continue
+            plans.append((plan, pose, i))
+        if not plans:
+            return None
+        best_plan, best_pose, i = min(plans, key=lambda x: x[0].cost)
+        rospy.loginfo("Moving to %s.", self.orders[i])
+        self.orders.pop(i)
+        # Drop bad orders with probability 10%, just so we don't keep them
+        # around forever, but we still try again to reach them in case a
+        # failure was just a fluke.
+        for x in bad_orders:
+            if np.random.random() < 0.1:
+                self.orders.remove(x)
+        return best_pose
 
     ########## STATE MACHINE LOOP ##########
     def loop(self):
@@ -289,22 +328,16 @@ class Supervisor:
         elif self.mode == Mode.READY:
             # Ready to move to the next way point
             self.stay_idle()
-            if self.order_list and len(self.order_list) > 0:
-                next_target_name = self.order_list.pop(0)
-                if next_target_name == "home":
-                    rospy.loginfo("Moving to home")
-                    self.publish_goal_pose(self.home_pose)
-                    self.mode = Mode.NAV
-                else:
-                    # Find pose of vendor
-                    rospy.loginfo("res: %s",self.navigator.map_resolution)
-                    vendor_pose = self.marker_tracker.get_goal_pose(next_target_name, self.vendor_dist)
-                    if vendor_pose is None:
-                        rospy.loginfo("Position of %s unknown. Skipping...", next_target_name)
-                    else:
-                        rospy.loginfo("Moving to %s", next_target_name)
-                        self.publish_goal_pose(vendor_pose)
-                        self.mode = Mode.NAV
+            next_order = self._pop_next_order()
+            if next_order:
+                self._should_go_home = True
+                self.publish_goal_pose(next_order)
+                self.mode = Mode.NAV
+            elif self._should_go_home:
+                rospy.loginfo("Going home")
+                self._should_go_home = False
+                self.publish_goal_pose(self.home_pose)
+                self.mode = Mode.NAV
 
         elif self.mode == Mode.NAV or self.mode == Mode.MANUAL:
             # Moving towards a desired pose

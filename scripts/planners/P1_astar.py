@@ -178,6 +178,7 @@ class AStar(object):
             x_current = self.find_best_est_cost_through()
             if x_current == self.x_goal:
                 self.path = self.reconstruct_path()
+                self.cost = self.cost_to_arrive[self.x_goal]
                 return True
             self.open_set.remove(x_current)
             self.closed_set.add(x_current)

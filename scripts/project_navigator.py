@@ -156,7 +156,19 @@ class Navigator:
         rospy.Subscriber('/cmd_nav', Pose2D, self.cmd_nav_callback)
 
         print "finished init"
-        
+
+    def plan_to(self, pose):
+        """Plan a path to the given pose using A*."""
+        x_min = self.snap_to_grid((-self.plan_horizon, -self.plan_horizon))
+        x_max = self.snap_to_grid((self.plan_horizon, self.plan_horizon))
+        x_i = nearest_free((self.x, self.y), self.occupancy_strict, self.plan_resolution)
+        x_g = nearest_free((pose[0], pose[1]), self.occupancy_strict, self.plan_resolution)
+        problem = AStar(x_min, x_max, x_i, x_g, self.occupancy_strict, self.occupancy, self.plan_resolution)
+        success =  problem.solve()
+        if not success:
+            return None
+        return problem
+
     def dyn_cfg_callback(self, config, level):
         rospy.loginfo("Reconfigure Request: k1:{k1}, k2:{k2}, k3:{k3}".format(**config))
         self.pose_controller.k1 = config["k1"]

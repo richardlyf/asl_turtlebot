@@ -90,7 +90,7 @@ class Supervisor:
         self.order_list = None
         self.order_repeat_count = 0
         self.order_repeat_max = 10 # A given order is published 10 times
-        self.vendor_dist = 0.4 # How far away to park from vendor
+        self.vendor_dist = 0.2 # How far away to park from vendor
         self.home_pose = (self.navigator.x, self.navigator.y, self.navigator.theta)
 
         # Error handling

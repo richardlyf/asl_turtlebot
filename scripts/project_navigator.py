@@ -87,6 +87,11 @@ class Navigator:
         # Do no reject replan if goal is new
         self.new_goal = True
 
+        # Tracks planning errors
+        self.prev_goal = None
+        self.error_count = 0
+        self.max_error_count = 7
+
         self.th_init = 0.0
 
         # map parameters
@@ -204,7 +209,7 @@ class Navigator:
                                                   self.map_height,
                                                   self.map_origin[0],
                                                   self.map_origin[1],
-                                                  8, # Increasing window size inflates obstacles
+                                                  4, # Increasing window size inflates obstacles
                                                   self.map_probs)
             if self.x_g is not None:
                 # if we have a goal to plan to, replan
@@ -218,6 +223,16 @@ class Navigator:
         cmd_vel.linear.x = 0.0
         cmd_vel.angular.z = 0.0
         self.nav_vel_pub.publish(cmd_vel)
+    
+    def planning_error(self):
+        """
+        returns true if planner errored out consecutively
+        """
+        return self.error_count >= self.max_error_count
+
+    def reset_planning_error(self):
+        self.error_count = 0
+        self.prev_goal = None
     
     def clear_goal(self):
         """
@@ -348,6 +363,10 @@ class Navigator:
         problem = AStar(state_min,state_max,x_init,X_g,self.occupancy_strict,self.occupancy,self.plan_resolution)
         success =  problem.solve()
         if not success:
+            if self.prev_goal != X_g:
+                self.error_count = 0
+            self.prev_goal = X_g
+            self.error_count += 1
             return
         planned_path = problem.path
 

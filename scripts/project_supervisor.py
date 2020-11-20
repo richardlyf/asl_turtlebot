@@ -83,7 +83,7 @@ class Supervisor:
                 break
 
         # Create MarkerTracker to remember vendor locations
-        self.vendor_names = ["apple", "banana", "pizza"]
+        self.vendor_names = ["apple", "banana", "pizza", "kite"]
         self.marker_tracker = MarkerTracker(self.vendor_names)
 
         # Remember the current order
@@ -142,6 +142,10 @@ class Supervisor:
             self.init_stop_sign()
 
     def vendor_detected_callback(self, msg):
+        # Do not update vendor once we're done exploring
+        if self.mode != Mode.MANUAL:
+            return
+
         # compute the angle of the vendor relative to the robot
         theta_left = msg.thetaleft
         theta_right = msg.thetaright
@@ -153,13 +157,16 @@ class Supervisor:
         if avg_theta != 0:
             avg_theta /= 2.
 
+        # Ad hoc solution for pizza being detected as kite
+        if msg.name == "kite":
+            msg.name = "pizza"
         # compute position of the detected vendor
         self.navigator.update_state()
         global_theta = avg_theta + self.navigator.theta
         vendor_x = self.navigator.x + np.cos(global_theta) * msg.distance 
         vendor_y = self.navigator.y + np.sin(global_theta) * msg.distance 
 
-        self.marker_tracker.place_marker(msg.name, (vendor_x, vendor_y), np.pi - global_theta)
+        self.marker_tracker.place_marker(msg.name, (vendor_x, vendor_y), global_theta - np.pi)
 
     def request_callback(self, msg):
         if self.mode == Mode.MANUAL:
@@ -239,6 +246,11 @@ class Supervisor:
         if self.prev_mode != self.mode:
             rospy.loginfo("Current mode: %s", self.mode)
             self.prev_mode = self.mode
+
+        # Check for planning errors
+        elif self.navigator.planning_error():
+            self.mode = Mode.READY
+            self.navigator.reset_planning_error()
 
         # Navigator reached goal 
         elif self.navigator.mode == NavMode.PARK and self.navigator.at_goal():

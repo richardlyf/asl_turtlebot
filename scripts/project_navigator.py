@@ -209,7 +209,7 @@ class Navigator:
                                                   self.map_height,
                                                   self.map_origin[0],
                                                   self.map_origin[1],
-                                                  4, # Increasing window size inflates obstacles
+                                                  6, # Increasing window size inflates obstacles
                                                   self.map_probs)
             if self.x_g is not None:
                 # if we have a goal to plan to, replan
